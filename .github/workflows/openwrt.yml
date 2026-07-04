@@ -1,7 +1,24 @@
 name: OpenWrt x86_64 Daede
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 支持手动触发并输入参数
+    inputs:
+      openwrt_version:
+        description: 'OpenWrt 版本 (如 v25.12.4)'
+        required: true
+        default: 'v25.12.4'
+      openwrt_branch:
+        description: 'OpenWrt 分支 (master 或 release 版本)'
+        required: false
+        default: 'master'
+      dae_repo:
+        description: 'dae 仓库地址'
+        required: false
+        default: 'https://github.com/kenzok8/openwrt-dae.git'
+      dae_branch:
+        description: 'dae 分支或 tag'
+        required: false
+        default: 'main'
   push:
     #自动执行开
     # branches:
@@ -27,7 +44,7 @@ jobs:
         sudo npm install -g pnpm
     - name: Clone OpenWrt
       run: |
-        git clone https://github.com/openwrt/openwrt.git -b v25.12.4 openwrt
+        git clone https://github.com/openwrt/openwrt.git -b ${{ inputs.openwrt_branch || inputs.openwrt_version }} openwrt
         cd openwrt
         git clone https://github.com/kenzok8/openwrt-daede.git package/daede
         ./scripts/feeds update -a
