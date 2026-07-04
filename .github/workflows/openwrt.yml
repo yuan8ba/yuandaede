@@ -45,8 +45,9 @@ jobs:
 
       - name: Clone OpenWrt
         run: |
-          git clone https://github.com/openwrt/openwrt.git -b ${{ steps.version.outputs.VERSION }} openwrt
-          cd openwrt
+          git clone https://github.com/openwrt/openwrt.git  openwrt
+          cd openwrt    
+          git checkout ${{ steps.version.outputs.VERSION || 'v25.12.4' }}
 
       - name: Add Packages
         run: |
