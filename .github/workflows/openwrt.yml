@@ -58,26 +58,117 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Modify IP & Apply Config
+      - name: Apply .config
         run: |
           cd openwrt
-          sed -i 's/192.168.1.1/192.168.5.1/g' package/base-files/files/bin/config_generate
-          
           cat > .config << 'EOF'
-          # 你的 .config 内容（保持不变）
+          # 基础平台与架构 (x86_64)
           CONFIG_TARGET_x86=y
           CONFIG_TARGET_x86_64=y
           CONFIG_TARGET_x86_64_DEVICE_generic=y
+          # 镜像输出格式 (VHDX 适用于 Hyper-V)
           CONFIG_VHDX_IMAGES=y
+          # CONFIG_TARGET_ROOTFS_EXT4FS is not set
+          # CONFIG_PACKAGE_gzip is not set
+          # CONFIG_PACKAGE_dnsmasq is not set
+          CONFIG_TARGET_IMAGE_VHDX_SIZE=1024
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          # 分区大小建议 (考虑到 geodata 和 eBPF 组件，建议调大)
           CONFIG_TARGET_KERNEL_PARTSIZE=256
           CONFIG_TARGET_ROOTFS_PARTSIZE=1024
-          # ...（把你原来的 .config 全部贴在这里）
+          # 开发者选项与 BPF 工具链
+          CONFIG_DEVEL=y
+          CONFIG_BPF_TOOLCHAIN_HOST=y
+          CONFIG_BPF_TOOLCHAIN_HOST_PATH="/usr/lib/llvm-18/bin"
+          # 内核 BPF/XDP 核心支持 (daed, PassWall 优化)
+          CONFIG_KERNEL_DEBUG_INFO=y
+          CONFIG_KERNEL_DEBUG_INFO_BTF=y
+          CONFIG_KERNEL_CGROUPS=y
+          CONFIG_KERNEL_CGROUP_BPF=y
+          CONFIG_KERNEL_BPF_EVENTS=y
+          CONFIG_KERNEL_XDP_SOCKETS=y
+          CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+          CONFIG_PACKAGE_ip-full=y
+          # ==================== 强制开启 BTF (eBPF CO-RE) ====================
+          CONFIG_DEBUG_INFO=y
+          CONFIG_DEBUG_INFO_BTF=y
+          CONFIG_DEBUG_INFO_BTF_MODULES=y
+          # 推荐配套配置
+          CONFIG_KERNEL_DEBUG_INFO=y
+          CONFIG_KERNEL_DEBUG_INFO_BTF=y
+          CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+          CONFIG_KERNEL_DEBUG_INFO_COMPRESSED=n
+          # BPF 核心支持
+          CONFIG_BPF=y
+          CONFIG_BPF_SYSCALL=y
+          CONFIG_BPF_JIT=y
+          CONFIG_BPF_LSM=y
+          CONFIG_BPF_EVENTS=y
+          CONFIG_KERNEL_BPF_EVENTS=y
+          # 禁用 daed 对独立 vmlinux-btf 的依赖
+          # CONFIG_DAED_USE_VMLINUX_BTF is not set
+          CONFIG_DAED_USE_VMLINUX_BTF=n
+          # USB 相关驱动
+          CONFIG_PACKAGE_kmod-usb-core=y
+          CONFIG_PACKAGE_kmod-usb-net=y
+          CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
+          CONFIG_PACKAGE_kmod-usb-ohci=y
+          CONFIG_PACKAGE_kmod-usb-ohci-pci=y
+          CONFIG_PACKAGE_kmod-usb-serial=y
+          CONFIG_PACKAGE_kmod-usb-storage=y
+          CONFIG_PACKAGE_kmod-usb-storage-extras=y
+          CONFIG_PACKAGE_kmod-usb2=y
+          CONFIG_PACKAGE_kmod-usb3=y
+          # Luci 界面与语言
+          CONFIG_PACKAGE_luci=y
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_PACKAGE_luci-app-toy=y
+          # 核心插件：daed, PassWall, MosDNS
+          CONFIG_PACKAGE_luci-app-mosdns=y
+          # 下面是你补充的常用组件/依赖（按需自动开启）
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_htop=y
+          CONFIG_PACKAGE_nano=y
+          CONFIG_PACKAGE_ca-bundle=y
+          CONFIG_PACKAGE_ip-full=y
+          CONFIG_NETKIT=y
+          CONFIG_KERNEL_NETKIT=y
+          CONFIG_PACKAGE_kmod-netkit=y # 這是關鍵的內核模組封裝
+          # eBPF 用戶端工具 (用來管理和啟動 Netkit)
+          CONFIG_PACKAGE_bpftool=y
+          CONFIG_PACKAGE_libbpf=y
+          CONFIG_PACKAGE_iproute2-full=y
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          # ==================== dnsmasq-full (完整版 DNS + DHCP，支持 DHCPv6/DNSSEC/ipset 等) ====================
+          CONFIG_PACKAGE_dnsmasq-full=y
+          # 推荐同时禁用默认的轻量版 dnsmasq，避免冲突
+          # CONFIG_PACKAGE_dnsmasq is not set
+          # dnsmasq-full 的常用功能子选项（根据需要开启）
+          CONFIG_PACKAGE_dnsmasq_full_dhcp=y
+          #CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
+          CONFIG_PACKAGE_dnsmasq_full_dnssec=y
+          CONFIG_PACKAGE_dnsmasq_full_ipset=y
+          CONFIG_PACKAGE_dnsmasq_full_nftset=y
+          CONFIG_PACKAGE_dnsmasq_full_auth=y
+          CONFIG_PACKAGE_dnsmasq_full_noid=y
+          # ==================== luci-app-openclash ====================
+          CONFIG_PACKAGE_luci-app-openclash=y
+          # OpenClash 核心依赖（推荐一起开启）
+          CONFIG_PACKAGE_clash=y
+          CONFIG_PACKAGE_luci-app-openclash_INCLUDE_ChinaDNS_NG=y
+          CONFIG_PACKAGE_luci-app-openclash_INCLUDE_Dns2socks=y
+          CONFIG_PACKAGE_luci-app-openclash_INCLUDE_MiniDNS=y
+          CONFIG_PACKAGE_luci-app-openclash_INCLUDE_PDNS_DNSMASQ=y
+          CONFIG_PACKAGE_luci-app-openclash_INCLUDE_TUN=y
+          CONFIG_PACKAGE_luci-app-daede=y        
+          CONFIG_PACKAGE_luci-app-daede_dae=y
+          CONFIG_PACKAGE_luci-app-daede_daed=y
+          CONFIG_PACKAGE_kmod-sched-core=y
+          CONFIG_PACKAGE_kmod-sched-bpf=y
+          CONFIG_PACKAGE_kmod-veth=y
           EOF
-          
-          echo "CONFIG_NETKIT=y" >> target/linux/x86/config-6.12
+          echo "CONFIG_NETKIT=y" >>  target/linux/x86/config-6.12        
           make defconfig
-
       - name: Download & Compile
         run: |
           cd openwrt
