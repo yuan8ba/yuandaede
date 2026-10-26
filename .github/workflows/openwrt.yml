@@ -143,7 +143,19 @@ jobs:
           CONFIG_PACKAGE_luci-proto-ipv6=n
           EOF
        
-          #  echo "CONFIG_NETKIT=y" >>  target/linux/x86/config-6.12        
+          #  echo "CONFIG_NETKIT=y" >>  target/linux/x86/config-6.12 
+          cat << 'EOF' >> .config
+          CONFIG_PACKAGE_luci-app-weechat=n
+          CONFIG_PACKAGE_weechat-full=n
+          CONFIG_PACKAGE_weechat-minimal=n
+          CONF
+          # 2. 物理清除：直接删除这两个有毒组件的源码目录，让 Kconfig 彻底看不见它们
+          rm -rf package/feeds/packages/prosody
+          rm -rf package/feeds/luci/applications/luci-app-weechat
+          rm -rf package/feeds/packages/net/weechat
+          
+          # 3. 清理依赖缓存，防止旧的依赖关系残留
+          rm -rf tmp
           make defconfig 
       - name: Download & Compile
         run: |
